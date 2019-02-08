@@ -9,10 +9,139 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+a. attach packages
+
 ```{r}
 library(tidyverse)
 library(tseries)
 library(forecast)
 
 ```
+
+b. Get data
+
+US Residential energy consumption values (jan 1973 - oct 2017), Trillion BTU (US Energy Information Administration)
+
+```{r}
+energy <- read_csv("energy.csv")
+```
+
+c. Create 'ts' timeseries data using information in the res_total column from energy
+
+```{r}
+res_ts <- ts(energy$res_total, frequency = 12, start = c(1973,1))
+res_ts
+
+plot(res_ts)
+```
+
+d. Decompose ts
+
+```{r}
+res_dc <- decompose(res_ts)
+plot(res_dc)
+```
+
+e. Other cool ways to present ts data
+
+```{r}
+monthplot(res_ts)
+```
+
+```{r}
+ggseasonplot(res_ts, polar= TRUE) +
+  theme_dark()
+
+```
+
+f. Simple moving averages
+
+forecast::ma()
+
+```{r}
+sma_res <- ma(res_ts, order = 5)
+plot(res_ts)
+lines(sma_res, col = "red")
+```
+
+g. ACF (autocorrelation)
+
+```{r}
+res_acf <- acf(res_ts)
+
+ggtsdisplay(res_ts)
+```
+
+i. Holt-Winters exponential smoothing
+```{r}
+res_hw <- HoltWinters(res_ts)
+res_hw
+
+plot(res_hw)
+```
+
+Now some future forecasting with holt winters
+
+```{r}
+res_forecast <- forecast(res_hw, h = 60)
+
+plot(res_forecast)
+```
+
+Check distribution of residuals 
+
+```{r}
+hist(res_forecast$residuals)
+res_forecast
+```
+
+Autoregressive Intergrated Moving Average (ARIMA) using auto.arima for p,d,q
+
+```{r}
+res_pdq <- auto.arima(res_ts)
+
+res_pdq
+```
+
+pdq: (1,0,2), (0,1,1)
+
+fit the ARIMA model using the pdq inputs
+
+```{r}
+
+res_arima <- arima(res_ts, order = c(1,0,2), seasonal = list(order = c(0,1,1)))
+
+res_arima
+
+# Check out the residuals 
+par(mfrow = c(1,2))
+hist(res_arima$residuals)
+qqnorm(res_arima$residuals)
+
+
+```
+
+
+Now forecast with ARIMA outputs
+
+```{r}
+forecast_res <- forecast(res_arima, h = 72)
+plot(forecast_res)
+```
+Now let's try viewing this from ggplot
+```{r}
+res_df <- data.frame(forecast_res)
+month_seq = seq(1,72)
+
+res_df2 <- data.frame(month_seq, res_df)
+
+ggplot(res_df2, aes(x = month_seq, y = Point.Forecast)) +
+  geom_line()
+```
+
+
+
+
+
+
 
